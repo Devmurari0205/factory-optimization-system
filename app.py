@@ -7,6 +7,13 @@ from model import load_and_train
 from utils import simulate, recommend
 from utils import simulate_factory, recommend_top
 
+try:
+    from utils import simulate_factory, recommend_top
+except ImportError:
+    import sys, os
+    sys.path.append(os.path.dirname(__file__))
+    from utils import simulate_factory, recommend_top
+
 st.set_page_config(page_title="Factory Optimization", layout="wide")
 
 st.title("🏭 Factory Reallocation & Shipping Optimization Dashboard")
