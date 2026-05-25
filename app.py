@@ -27,7 +27,7 @@ st.subheader("📊 Key Metrics")
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric("Avg Lead Time", round(df['Lead Time'].mean(),2))
+col1.metric("Avg Lead Time", round(df['Shipping Duration'].mean(),2))
 col2.metric("Total Sales", int(df['Sales'].sum()))
 col3.metric("Total Profit", int(df['Gross Profit'].sum()))
 
