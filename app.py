@@ -5,69 +5,90 @@ import matplotlib.pyplot as plt
 
 from model import load_and_train
 from utils import simulate, recommend
+from utils import simulate_factory, recommend_top
 
 st.set_page_config(page_title="Factory Optimization", layout="wide")
 
-st.title("🏭 Factory Reallocation & Shipping Optimization System")
+st.title("🏭 Factory Reallocation & Shipping Optimization Dashboard")
 
-# Load data
-df, model = load_and_train()
+# Load model + data
+df, model, encoders = load_and_train()
 
-X_cols = ['Region','Ship Mode','Division','Product Name','Sales','Cost','Units']
-
-# Sidebar
+# Sidebar controls
 st.sidebar.header("⚙️ Controls")
 
 product = st.sidebar.selectbox("Select Product", df['Product Name'].unique())
 region = st.sidebar.selectbox("Select Region", df['Region'].unique())
-ship_mode = st.sidebar.selectbox("Select Ship Mode", df['Ship Mode'].unique())
+ship_mode = st.sidebar.selectbox("Ship Mode", df['Ship Mode'].unique())
 
-# KPI Section
-st.subheader("📊 Key Metrics")
+priority = st.sidebar.slider("Optimization Priority (Speed vs Profit)", 0, 100, 50)
 
-col1, col2, col3 = st.columns(3)
+# Tabs
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 Simulator",
+    "📈 What-If Analysis",
+    "🏆 Recommendations",
+    "⚠️ Risk Panel"
+])
 
-col1.metric("Avg Lead Time", round(df['Shipping Duration'].mean(),2))
-col2.metric("Total Sales", int(df['Sales'].sum()))
-col3.metric("Total Profit", int(df['Gross Profit'].sum()))
+# ------------------ TAB 1 ------------------
+with tab1:
+    st.subheader("Factory Optimization Simulator")
 
-# Visualization
-st.subheader("📈 Data Insights")
+    sim_df = simulate_factory(df, model, encoders, product, region, ship_mode)
 
-fig, ax = plt.subplots()
-sns.boxplot(data=df, x='Ship Mode', y='Lead Time', ax=ax)
-st.pyplot(fig)
-
-# Clustering View
-st.subheader("🧠 Clustering Analysis")
-
-from sklearn.cluster import KMeans
-
-kmeans = KMeans(n_clusters=4)
-df['Cluster'] = kmeans.fit_predict(df[X_cols])
-
-fig2, ax2 = plt.subplots()
-sns.scatterplot(data=df, x='Sales', y='Lead Time', hue='Cluster', ax=ax2)
-st.pyplot(fig2)
-
-# Simulation
-st.subheader("🔄 Scenario Simulation")
-
-if st.button("Run Simulation"):
-
-    sim_df = simulate(df, model, X_cols, product, region, ship_mode)
-
-    st.write("### Simulation Results")
     st.dataframe(sim_df)
 
-    # Recommendation
-    rec = recommend(sim_df)
+    st.bar_chart(sim_df.set_index("Factory"))
 
-    st.write("### 🏆 Top Recommendations")
-    st.dataframe(rec)
+# ------------------ TAB 2 ------------------
+with tab2:
+    st.subheader("What-If Scenario")
 
-    # Visualization
-    fig3, ax3 = plt.subplots()
-    sns.barplot(data=rec, x='Factory', y='Predicted Lead Time', ax=ax3)
-    plt.xticks(rotation=45)
-    st.pyplot(fig3)
+    current = sim_df.iloc[-1]
+    best = sim_df.iloc[0]
+
+    st.write("### Current vs Best Factory")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("Current Lead Time", round(current["Predicted Lead Time"], 2))
+
+    with col2:
+        st.metric("Best Lead Time", round(best["Predicted Lead Time"], 2))
+
+    improvement = ((current["Predicted Lead Time"] - best["Predicted Lead Time"]) / current["Predicted Lead Time"]) * 100
+
+    st.success(f"🚀 Improvement: {round(improvement,2)}%")
+
+# ------------------ TAB 3 ------------------
+with tab3:
+    st.subheader("Top Recommendations")
+
+    top = recommend_top(sim_df)
+
+    st.write("### Best Factory Recommendation")
+    st.success(f"🏭 {top['Factory']}")
+
+    st.metric("Predicted Lead Time", round(top["Predicted Lead Time"], 2))
+
+# ------------------ TAB 4 ------------------
+with tab4:
+    st.subheader("Risk & Impact Panel")
+
+    st.warning("⚠️ Profit Impact Risk Analysis")
+
+    # Simple proxy logic
+    risk_score = 100 - priority
+
+    st.metric("Risk Score", risk_score)
+
+    if risk_score > 50:
+        st.error("High Risk: May impact profit margins")
+    else:
+        st.success("Low Risk: Safe optimization")
+
+# ------------------ Footer ------------------
+st.write("---")
+st.caption("Built for Nassau Candy Optimization System 🚀")
