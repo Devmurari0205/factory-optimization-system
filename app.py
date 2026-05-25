@@ -7,12 +7,42 @@ from model import load_and_train
 from utils import simulate, recommend
 from utils import simulate_factory, recommend_top
 
-try:
-    from utils import simulate_factory, recommend_top
-except ImportError:
-    import sys, os
-    sys.path.append(os.path.dirname(__file__))
-    from utils import simulate_factory, recommend_top
+# --- MOVE UTILS CODE HERE ---
+
+def simulate_factory(df, model, encoders, product, region, ship_mode):
+    results = []
+
+    factories = [
+        "Lot's O' Nuts",
+        "Wicked Choccy's",
+        "Sugar Shack",
+        "Secret Factory",
+        "The Other Factory"
+    ]
+
+    for factory in factories:
+        sample = df[df['Product Name'] == product].iloc[0]
+
+        X = pd.DataFrame({
+            'Region_enc': [encoders['region'].transform([region])[0]],
+            'Ship Mode_enc': [encoders['ship'].transform([ship_mode])[0]],
+            'Product_enc': [encoders['product'].transform([product])[0]],
+            'Units': [sample['Units']],
+            'Cost': [sample['Cost']]
+        })
+
+        predicted_time = model.predict(X)[0]
+
+        results.append({
+            "Factory": factory,
+            "Predicted Lead Time": predicted_time
+        })
+
+    return pd.DataFrame(results).sort_values("Predicted Lead Time")
+
+
+def recommend_top(df_sim):
+    return df_sim.iloc[0]
 
 st.set_page_config(page_title="Factory Optimization", layout="wide")
 
