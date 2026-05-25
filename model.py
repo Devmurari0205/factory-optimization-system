@@ -1,32 +1,37 @@
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestRegressor
 
 def load_and_train():
+    df = pd.read_csv("data.csv")
 
-    df = pd.read_csv("Nassau Candy Distributor.csv")
-
+    # Date conversion
     df['Order Date'] = pd.to_datetime(df['Order Date'])
     df['Ship Date'] = pd.to_datetime(df['Ship Date'])
-    df['Shipping Duration'] = (df['Ship Date'] - df['Order Date']).dt.days
 
-    df = df.dropna()
-    df = df[df['Shipping Duration'] < 30]
+    # Create Lead Time
+    df['Lead Time'] = (df['Ship Date'] - df['Order Date']).dt.days
 
-    le = LabelEncoder()
+    # Encoding
+    le_region = LabelEncoder()
+    le_ship = LabelEncoder()
+    le_product = LabelEncoder()
 
-    categorical_cols = ['Region','Ship Mode','Division','Product Name']
-    for col in categorical_cols:
-        df[col] = le.fit_transform(df[col])
+    df['Region_enc'] = le_region.fit_transform(df['Region'])
+    df['Ship Mode_enc'] = le_ship.fit_transform(df['Ship Mode'])
+    df['Product_enc'] = le_product.fit_transform(df['Product Name'])
 
-    scaler = StandardScaler()
-    num_cols = ['Sales','Cost','Units']
-    df[num_cols] = scaler.fit_transform(df[num_cols])
-
-    X = df[['Region','Ship Mode','Division','Product Name','Sales','Cost','Units']]
+    # Features
+    X = df[['Region_enc','Ship Mode_enc','Product_enc','Units','Cost']]
     y = df['Lead Time']
 
     model = RandomForestRegressor()
     model.fit(X, y)
 
-    return df, model
+    encoders = {
+        "region": le_region,
+        "ship": le_ship,
+        "product": le_product
+    }
+
+    return df, model, encoders
