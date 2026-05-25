@@ -1,35 +1,36 @@
 import pandas as pd
 
-def simulate(df, model, X_cols, product, region, ship_mode):
+factories = [
+    "Lot's O' Nuts",
+    "Wicked Choccy's",
+    "Sugar Shack",
+    "Secret Factory",
+    "The Other Factory"
+]
 
-    factories = df['Division'].unique()
+def simulate_factory(df, model, encoders, product, region, ship_mode):
     results = []
 
-    for f in factories:
+    sample = df[df['Product Name'] == product].iloc[0]
 
-        sample = df.sample(1).copy()
-
-        sample['Product Name'] = product
-        sample['Region'] = region
-        sample['Ship Mode'] = ship_mode
-        sample['Division'] = f
-
-        pred = model.predict(sample[X_cols])[0]
-
-        results.append({
-            "Factory": f,
-            "Predicted Lead Time": pred
+    for factory in factories:
+        X = pd.DataFrame({
+            'Region_enc': [encoders['region'].transform([region])[0]],
+            'Ship Mode_enc': [encoders['ship'].transform([ship_mode])[0]],
+            'Product_enc': [encoders['product'].transform([product])[0]],
+            'Units': [sample['Units']],
+            'Cost': [sample['Cost']]
         })
 
-    return pd.DataFrame(results)
+        pred = model.predict(X)[0]
+
+        results.append({
+            "Factory": factory,
+            "Predicted Lead Time": round(pred,2)
+        })
+
+    return pd.DataFrame(results).sort_values("Predicted Lead Time")
 
 
-def recommend(sim_df):
-
-    current_time = sim_df['Predicted Lead Time'].mean()
-
-    sim_df['Improvement %'] = ((current_time - sim_df['Predicted Lead Time']) / current_time) * 100
-
-    sim_df = sim_df.sort_values(by='Improvement %', ascending=False)
-
-    return sim_df.head(3)
+def recommend_top(df_sim):
+    return df_sim.iloc[0]
